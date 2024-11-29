@@ -1,19 +1,19 @@
 const express = require('express');
-const app = express();
-__path = process.cwd();
 const bodyParser = require("body-parser");
-let code = require('./pair');
-require('events').EventEmitter.defaultMaxListeners = 500;
+const app = express();
+const path = require('path');
 
-app.use('/code', code);
-
-app.use('/', async (req, res, next) => {
-  res.sendFile(__path + '/pair.html');
-});
-
+// Set static and JSON parsers
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-module.exports = (req, res) => {
-  app(req, res);
-};
+// Serve pair.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'pair.html'));
+});
+
+// Define other routes
+app.use('/code', require('./pair'));
+
+// Export as a Vercel-compatible handler
+module.exports = app;
