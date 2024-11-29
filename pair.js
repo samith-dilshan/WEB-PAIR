@@ -20,10 +20,10 @@ function removeFile(FilePath) {
 
 router.get('/', async (req, res) => {
     let num = req.query.number;
-    async function PrabathPair() {
+    async function DatamatePair() {
         const { state, saveCreds } = await useMultiFileAuthState(`./session`);
         try {
-            let PrabathPairWeb = makeWASocket({
+            let DatamatePairWeb = makeWASocket({
                 auth: {
                     creds: state.creds,
                     keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
@@ -33,25 +33,25 @@ router.get('/', async (req, res) => {
                 browser: Browsers.macOS("Safari"),
             });
 
-            if (!PrabathPairWeb.authState.creds.registered) {
+            if (!DatamatePairWeb.authState.creds.registered) {
                 await delay(1500);
                 num = num.replace(/[^0-9]/g, '');
-                const code = await PrabathPairWeb.requestPairingCode(num);
+                const code = await DatamatePairWeb.requestPairingCode(num);
                 if (!res.headersSent) {
                     await res.send({ code });
                 }
             }
 
-            PrabathPairWeb.ev.on('creds.update', saveCreds);
-            PrabathPairWeb.ev.on("connection.update", async (s) => {
+            DatamatePairWeb.ev.on('creds.update', saveCreds);
+            DatamatePairWeb.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === "open") {
                     try {
                         await delay(10000);
-                        const sessionPrabath = fs.readFileSync('./session/creds.json');
+                        const sessionDatamate = fs.readFileSync('./session/creds.json');
 
                         const auth_path = './session/';
-                        const user_jid = jidNormalizedUser(PrabathPairWeb.user.id);
+                        const user_jid = jidNormalizedUser(DatamatePairWeb.user.id);
 
                         function randomMegaId(length = 6, numberLength = 4) {
                             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -68,14 +68,18 @@ router.get('/', async (req, res) => {
                         // Add "DataMate-" prefix to the session ID
                         const string_session = "DataMate-" + mega_url.replace('https://mega.nz/file/', '');
 
-                        const sid = string_session;
+                        // Send session ID
+                        await DatamatePairWeb.sendMessage(user_jid, {
+                            text: `Session ID: ${string_session}`
+                        });
 
-                        const dt = await PrabathPairWeb.sendMessage(user_jid, {
-                            text: sid
+                        // Send warning message
+                        await DatamatePairWeb.sendMessage(user_jid, {
+                            text: "❌ මෙම කේතය කිසි කෙනෙකුට නොදෙන්න."
                         });
 
                     } catch (e) {
-                        exec('pm2 restart prabath');
+                        exec('pm2 restart datamate');
                     }
 
                     await delay(100);
@@ -83,25 +87,25 @@ router.get('/', async (req, res) => {
                     process.exit(0);
                 } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
                     await delay(10000);
-                    PrabathPair();
+                    DatamatePair();
                 }
             });
         } catch (err) {
-            exec('pm2 restart prabath-md');
+            exec('pm2 restart datamate-md');
             console.log("service restarted");
-            PrabathPair();
+            DatamatePair();
             await removeFile('./session');
             if (!res.headersSent) {
                 await res.send({ code: "Service Unavailable" });
             }
         }
     }
-    return await PrabathPair();
+    return await DatamatePair();
 });
 
 process.on('uncaughtException', function (err) {
     console.log('Caught exception: ' + err);
-    exec('pm2 restart prabath');
+    exec('pm2 restart datamate');
 });
 
 module.exports = router;
